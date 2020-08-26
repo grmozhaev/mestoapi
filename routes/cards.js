@@ -1,12 +1,13 @@
-const router = require("express").Router();
-const path = require("path");
-const fs = require("fs");
+const router = require('express').Router();
+const path = require('path');
+const { getData } = require('../utils/getData');
 
-const cardsPath = path.join(__dirname, "../data/cards.json");
-const cards = JSON.parse(fs.readFileSync(cardsPath));
+const cardsPath = path.join(__dirname, '../data/cards.json');
 
-router.get("/cards", (req, res) => {
-  res.send(cards);
+router.get('/cards', (req, res) => {
+  getData(res, cardsPath, (data) => {
+    res.send(JSON.parse(data));
+  });
 });
 
 module.exports = router;
