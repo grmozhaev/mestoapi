@@ -16,8 +16,16 @@ module.exports.createCard = (req, res) => {
 };
 
 module.exports.deleteCard = (req, res) => {
-  Card.deleteOne(req.body.id)
-    .then((card) => res.send({ data: card }))
+  const { cardId } = req.params;
+
+  Card.deleteOne({ _id: cardId })
+    .then((card) => {
+      if (card.n) {
+        res.send({ data: card });
+      } else {
+        res.status(404).send({ message: 'Карточка не найдена' });
+      }
+    })
     .catch((err) => res.status(500).send({ message: err.message }));
 };
 
@@ -27,7 +35,13 @@ module.exports.likeCard = (req, res) => {
     { $addToSet: { likes: req.user._id } },
     { new: true },
   )
-    .then((card) => res.send({ data: card }))
+    .then((card) => {
+      if (card) {
+        res.send({ data: card });
+      } else {
+        res.status(404).send({ message: 'Карточка не найдена' });
+      }
+    })
     .catch((err) => res.status(500).send({ message: err.message }));
 };
 
@@ -37,6 +51,12 @@ module.exports.dislikeCard = (req, res) => {
     { $pull: { likes: req.user._id } },
     { new: true },
   )
-    .then((card) => res.send({ data: card }))
+    .then((card) => {
+      if (card) {
+        res.send({ data: card });
+      } else {
+        res.status(404).send({ message: 'Карточка не найдена' });
+      }
+    })
     .catch((err) => res.status(500).send({ message: err.message }));
 };

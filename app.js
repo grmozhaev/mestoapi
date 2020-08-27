@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const rateLimit = require('express-rate-limit');
 const cardsRouter = require('./routes/cards');
 const usersRouter = require('./routes/users');
 
@@ -16,9 +17,16 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
   useFindAndModify: false,
 });
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});
+
+app.use(limiter);
+
 app.use((req, res, next) => {
   req.user = {
-    _id: '5f46e1ddc4a9f64408ceafaa',
+    _id: '5f47886beaf0ec2ba8b2165b',
   };
 
   next();

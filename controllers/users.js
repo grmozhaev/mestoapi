@@ -7,9 +7,16 @@ module.exports.getUsers = (req, res) => {
 };
 
 module.exports.getUserById = (req, res) => {
-  const { id } = req.body;
-  User.findById({ id })
-    .then((user) => res.send({ data: user }))
+  const { userId } = req.params;
+
+  User.findById(userId)
+    .then((user) => {
+      if (user) {
+        res.send({ data: user });
+      } else {
+        res.status(404).send({ message: 'Пользователь не найден' });
+      }
+    })
     .catch((err) => res.status(500).send({ message: err.message }));
 };
 
@@ -18,7 +25,13 @@ module.exports.createUser = (req, res) => {
 
   User.create({ name, about, avatar })
     .then((user) => res.send({ data: user }))
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .catch((err) => {
+      if (err.message.toLowerCase().includes('validation failed')) {
+        res.status(400).send({ message: err.message });
+      } else {
+        res.status(500).send({ message: err.message });
+      }
+    });
 };
 
 module.exports.updateBio = (req, res) => {
@@ -29,8 +42,20 @@ module.exports.updateBio = (req, res) => {
     { about },
     { new: true, runValidators: true },
   )
-    .then((user) => res.send({ data: user }))
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .then((user) => {
+      if (user) {
+        res.send({ data: user });
+      } else {
+        res.status(404).send({ message: 'Пользователь с таким ID отсутствует' });
+      }
+    })
+    .catch((err) => {
+      if (err.message.toLowerCase().includes('validation failed')) {
+        res.status(400).send({ message: err.message });
+      } else {
+        res.status(500).send({ message: err.message });
+      }
+    });
 };
 
 module.exports.updateAvatar = (req, res) => {
@@ -41,6 +66,18 @@ module.exports.updateAvatar = (req, res) => {
     { avatar },
     { new: true, runValidators: true },
   )
-    .then((user) => res.send({ data: user }))
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .then((user) => {
+      if (user) {
+        res.send({ data: user });
+      } else {
+        res.status(404).send({ message: 'Пользователь с таким ID отсутствует' });
+      }
+    })
+    .catch((err) => {
+      if (err.message.toLowerCase().includes('validation failed')) {
+        res.status(400).send({ message: err.message });
+      } else {
+        res.status(500).send({ message: err.message });
+      }
+    });
 };
