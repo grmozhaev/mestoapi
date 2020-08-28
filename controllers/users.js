@@ -26,7 +26,7 @@ module.exports.createUser = (req, res) => {
   User.create({ name, about, avatar })
     .then((user) => res.send({ data: user }))
     .catch((err) => {
-      if (err.message.toLowerCase().includes('validation failed')) {
+      if (err.name === 'ValidationError') {
         res.status(400).send({ message: err.message });
       } else {
         res.status(500).send({ message: err.message });
@@ -50,7 +50,7 @@ module.exports.updateBio = (req, res) => {
       }
     })
     .catch((err) => {
-      if (err.message.toLowerCase().includes('validation failed')) {
+      if (err.name === 'ValidationError') {
         res.status(400).send({ message: err.message });
       } else {
         res.status(500).send({ message: err.message });
@@ -74,7 +74,7 @@ module.exports.updateAvatar = (req, res) => {
       }
     })
     .catch((err) => {
-      if (err.message.toLowerCase().includes('validation failed')) {
+      if (err.name === 'ValidationError') {
         res.status(400).send({ message: err.message });
       } else {
         res.status(500).send({ message: err.message });
