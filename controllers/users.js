@@ -23,7 +23,7 @@ module.exports.getUserById = (req, res) => {
     .catch((err) => res.status(500).send({ message: err.message }));
 };
 
-module.exports.createUser = (req, res) => {
+module.exports.createUser = async (req, res) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
@@ -33,35 +33,33 @@ module.exports.createUser = (req, res) => {
     return;
   }
 
-  User.findOne({ email })
-    .then((entry) => {
-      if (entry) {
-        res.status(409).send({ message: 'Пользователь с таким email уже существует' });
-      }
-    })
-    .catch((err) => {
-      res.status(500).send({ message: err.message });
-    });
+  try {
+    const entry = await User.findOne({ email });
 
-  bcrypt.hash(password, 10).then((hash) => {
-    User.create({
-      name, about, avatar, email, password: hash,
-    })
-      .then((user) => res.send({
+    if (entry) {
+      res.status(409).send({ message: 'Пользователь с таким email уже существует' });
+    } else {
+      const hash = await bcrypt.hash(password, 10);
+
+      const user = await User.create({
+        name, about, avatar, email, password: hash,
+      });
+
+      res.send({
         _id: user._id,
         name: user.name,
         about: user.about,
         avatar: user.avatar,
         email: user.email,
-      }))
-      .catch((err) => {
-        if (err.name === 'ValidationError') {
-          res.status(400).send({ message: err.message });
-        } else {
-          res.status(500).send({ message: err.message });
-        }
       });
-  });
+    }
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      res.status(400).send({ message: err.message });
+    } else {
+      res.status(500).send({ message: err.message });
+    }
+  }
 };
 
 module.exports.updateBio = (req, res) => {
