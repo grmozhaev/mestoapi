@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 const User = require('../models/user');
-const secretKey = require('../utils/jwt_secret');
 
 module.exports.getUsers = (req, res) => {
   User.find({})
@@ -29,10 +28,20 @@ module.exports.createUser = (req, res) => {
     name, about, avatar, email, password,
   } = req.body;
 
-  if (!password) {
-    res.status(400).send({ message: 'Пароль не может быть пустым' });
+  if (!password || password.match(/[\s]+/g)) {
+    res.status(400).send({ message: 'Пароль не может быть пустым или состоять из пробелов' });
     return;
   }
+
+  User.findOne({ email })
+    .then((entry) => {
+      if (entry) {
+        res.status(409).send({ message: 'Пользователь с таким email уже существует' });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({ message: err.message });
+    });
 
   bcrypt.hash(password, 10).then((hash) => {
     User.create({
@@ -105,10 +114,11 @@ module.exports.updateAvatar = (req, res) => {
 
 module.exports.login = (req, res) => {
   const { email, password } = req.body;
+  const { NODE_ENV, JWT_KEY } = process.env;
 
   return User.findUserByCredentials(email, password)
     .then((user) => {
-      const token = jwt.sign({ _id: user._id }, secretKey, { expiresIn: '7d' });
+      const token = jwt.sign({ _id: user._id }, (NODE_ENV === 'production' ? JWT_KEY : 'dev-key'), { expiresIn: '7d' });
 
       res
         .cookie('jwt', token, {
