@@ -26,10 +26,14 @@ module.exports.deleteCard = (req, res) => {
 
   Card.deleteOne({ _id: cardId })
     .then((card) => {
-      if (card.n) {
-        res.send({ data: card });
+      if (card.owner === req.user._id) {
+        if (card.n) {
+          res.send({ data: card });
+        } else {
+          res.status(404).send({ message: 'Карточка не найдена' });
+        }
       } else {
-        res.status(404).send({ message: 'Карточка не найдена' });
+        res.status(403).send({ message: 'Недостаточно прав для совершения операции' });
       }
     })
     .catch((err) => res.status(500).send({ message: err.message }));
