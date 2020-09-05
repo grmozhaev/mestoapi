@@ -5,11 +5,12 @@ const bodyParser = require('body-parser');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
+const { errors } = require('celebrate');
+const { login, createUser } = require('./controllers/users');
+const { requestLogger, errorLogger } = require('./middlewares/logger');
 const auth = require('./middlewares/auth');
 const cardsRouter = require('./routes/cards');
 const usersRouter = require('./routes/users');
-
-const { login, createUser } = require('./controllers/users');
 
 const { PORT = 3000 } = process.env;
 const app = express();
@@ -33,6 +34,14 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
+app.use(requestLogger);
+
+app.get('/crash-test', () => {
+  setTimeout(() => {
+    throw new Error('Сервер сейчас упадёт');
+  }, 0);
+});
+
 app.post('/signin', login);
 app.post('/signup', createUser);
 
@@ -43,6 +52,25 @@ app.use('/', usersRouter);
 
 app.use('*', (req, res) => {
   res.status(404).send({ message: 'Запрашиваемый ресурс не найден' });
+});
+
+app.use(errorLogger);
+
+app.use(errors());
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  const { statusCode = 500, message } = err;
+
+  if (err.name === 'ValidationError') {
+    res
+      .status(400)
+      .send({ message });
+  } else {
+    res
+      .status(statusCode)
+      .send({ message: statusCode === 500 ? 'На сервере произошла ошибка' : `123123123123123123123------${message}` });
+  }
 });
 
 app.listen(PORT, () => {

@@ -1,27 +1,38 @@
 const Card = require('../models/card');
+const NotFoundError = require('../errors/not-found-error');
+const NotPermittedError = require('../errors/not-permitted-error');
+const DefaultError = require('../errors/default-error');
 
-module.exports.getCards = (req, res) => {
+module.exports.getCards = (req, res, next) => {
   Card.find({})
-    .then((cards) => res.send({ data: cards }))
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .then((cards) => {
+      if (!cards) {
+        throw new DefaultError();
+      }
+
+      res.send({ data: cards });
+    })
+    .catch(next);
+  // .catch((err) => res.status(500).send({ message: err.message }));
 };
 
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const owner = req.user._id;
   const { name, link } = req.body;
 
   Card.create({ name, link, owner })
     .then((card) => res.send({ data: card }))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({ message: err.message });
-      } else {
-        res.status(500).send({ message: err.message });
-      }
-    });
+    .catch(next);
+  // .catch((err) => {
+  //   if (err.name === 'ValidationError') {
+  //     res.status(400).send({ message: err.message });
+  //   } else {
+  //     res.status(500).send({ message: err.message });
+  //   }
+  // });
 };
 
-module.exports.deleteCard = (req, res) => {
+module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
 
   Card.deleteOne({ _id: cardId })
@@ -30,16 +41,19 @@ module.exports.deleteCard = (req, res) => {
         if (card.n) {
           res.send({ data: card });
         } else {
-          res.status(404).send({ message: 'Карточка не найдена' });
+          throw new NotFoundError('Карточка не найдена');
+          // res.status(404).send({ message: 'Карточка не найдена' });
         }
       } else {
-        res.status(403).send({ message: 'Недостаточно прав для совершения операции' });
+        throw new NotPermittedError('Недостаточно прав для совершения операции');
+        // res.status(403).send({ message: 'Недостаточно прав для совершения операции' });
       }
     })
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .catch(next);
+  // .catch((err) => res.status(500).send({ message: err.message }));
 };
 
-module.exports.likeCard = (req, res) => {
+module.exports.likeCard = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $addToSet: { likes: req.user._id } },
@@ -49,13 +63,15 @@ module.exports.likeCard = (req, res) => {
       if (card) {
         res.send({ data: card });
       } else {
-        res.status(404).send({ message: 'Карточка не найдена' });
+        throw new NotFoundError('Карточка не найдена');
+        // res.status(404).send({ message: 'Карточка не найдена' });
       }
     })
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .catch(next);
+  // .catch((err) => res.status(500).send({ message: err.message }));
 };
 
-module.exports.dislikeCard = (req, res) => {
+module.exports.dislikeCard = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
     { $pull: { likes: req.user._id } },
@@ -65,8 +81,10 @@ module.exports.dislikeCard = (req, res) => {
       if (card) {
         res.send({ data: card });
       } else {
-        res.status(404).send({ message: 'Карточка не найдена' });
+        throw new NotFoundError('Карточка не найдена');
+        // res.status(404).send({ message: 'Карточка не найдена' });
       }
     })
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .catch(next);
+  // .catch((err) => res.status(500).send({ message: err.message }));
 };
