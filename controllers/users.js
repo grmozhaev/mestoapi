@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 const NotFoundError = require('../errors/not-found-error');
 const InvalidDataError = require('../errors/invalid-data-error');
 const ConflictingRequestError = require('../errors/conflicting-request-error');
-const AuthorizationError = require('../errors/authorization-error');
 const DefaultError = require('../errors/default-error');
 
 const User = require('../models/user');
@@ -39,11 +38,11 @@ module.exports.createUser = async (req, res, next) => {
     name, about, avatar, email, password,
   } = req.body;
 
-  if (!password || password.match(/[\s]+/g)) {
-    throw new InvalidDataError('Пароль не может быть пустым или состоять из пробелов');
-  }
-
   try {
+    if (password.match(/[\s]+/g)) {
+      throw new InvalidDataError('Пароль не может быть состоять из пробелов');
+    }
+
     const entry = await User.findOne({ email });
 
     if (entry) {
@@ -68,22 +67,31 @@ module.exports.createUser = async (req, res, next) => {
   }
 };
 
-module.exports.updateBio = (req, res, next) => {
-  const { about } = req.body;
+module.exports.updateBio = async (req, res, next) => {
+  let name;
+  let about;
 
-  User.findByIdAndUpdate(
-    req.user._id,
-    { about },
-    { new: true, runValidators: true },
-  )
-    .then((user) => {
-      if (user) {
-        res.send({ data: user });
-      } else {
-        throw new NotFoundError('Пользователь с таким ID отсутствует');
-      }
-    })
-    .catch(next);
+  try {
+    const entry = await User.findById(req.user._id);
+    if (entry) {
+      name = entry.name;
+      about = entry.about;
+    } else {
+      throw new NotFoundError('error');
+    }
+
+    const { name: newName = name, about: newAbout = about } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name: newName, about: newAbout },
+      { new: true, runValidators: true },
+    );
+
+    res.send({ data: user });
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports.updateAvatar = (req, res, next) => {
@@ -121,6 +129,4 @@ module.exports.login = (req, res, next) => {
         .end();
     })
     .catch(next);
-  // next(new AuthorizationError('Необходима авторизация')),
-  // );
 };

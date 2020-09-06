@@ -13,7 +13,6 @@ module.exports.getCards = (req, res, next) => {
       res.send({ data: cards });
     })
     .catch(next);
-  // .catch((err) => res.status(500).send({ message: err.message }));
 };
 
 module.exports.createCard = (req, res, next) => {
@@ -23,34 +22,30 @@ module.exports.createCard = (req, res, next) => {
   Card.create({ name, link, owner })
     .then((card) => res.send({ data: card }))
     .catch(next);
-  // .catch((err) => {
-  //   if (err.name === 'ValidationError') {
-  //     res.status(400).send({ message: err.message });
-  //   } else {
-  //     res.status(500).send({ message: err.message });
-  //   }
-  // });
 };
 
-module.exports.deleteCard = (req, res, next) => {
+module.exports.deleteCard = async (req, res, next) => {
   const { cardId } = req.params;
 
-  Card.deleteOne({ _id: cardId })
-    .then((card) => {
-      if (card.owner === req.user._id) {
-        if (card.n) {
-          res.send({ data: card });
-        } else {
-          throw new NotFoundError('Карточка не найдена');
-          // res.status(404).send({ message: 'Карточка не найдена' });
-        }
-      } else {
-        throw new NotPermittedError('Недостаточно прав для совершения операции');
-        // res.status(403).send({ message: 'Недостаточно прав для совершения операции' });
-      }
-    })
-    .catch(next);
-  // .catch((err) => res.status(500).send({ message: err.message }));
+  let owner;
+
+  try {
+    const entry = await Card.findById(cardId);
+    if (entry) {
+      owner = entry.owner;
+    } else {
+      throw new NotFoundError('Карточка не найдена');
+    }
+
+    if (owner.toString() === req.user._id) {
+      const card = await Card.deleteOne({ _id: cardId });
+      res.send({ data: card });
+    } else {
+      throw new NotPermittedError('Недостаточно прав для совершения операции');
+    }
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports.likeCard = (req, res, next) => {
@@ -64,11 +59,9 @@ module.exports.likeCard = (req, res, next) => {
         res.send({ data: card });
       } else {
         throw new NotFoundError('Карточка не найдена');
-        // res.status(404).send({ message: 'Карточка не найдена' });
       }
     })
     .catch(next);
-  // .catch((err) => res.status(500).send({ message: err.message }));
 };
 
 module.exports.dislikeCard = (req, res, next) => {
@@ -82,9 +75,7 @@ module.exports.dislikeCard = (req, res, next) => {
         res.send({ data: card });
       } else {
         throw new NotFoundError('Карточка не найдена');
-        // res.status(404).send({ message: 'Карточка не найдена' });
       }
     })
     .catch(next);
-  // .catch((err) => res.status(500).send({ message: err.message }));
 };
