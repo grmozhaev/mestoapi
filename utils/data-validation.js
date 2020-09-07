@@ -13,9 +13,9 @@ const urlValidation = (value, helpers) => {
 
 // eslint-disable-next-line no-unused-vars
 const passwordValidation = (value, helpers) => {
-  const urlRegex = /[\s]+/g;
+  const valueSet = new Set(value);
 
-  if (urlRegex.test(value)) {
+  if (valueSet.size === 1 && valueSet.has(' ')) {
     throw new InvalidDataError('password cannot consist of whitespaces only');
   }
 
