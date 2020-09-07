@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { celebrate, Joi } = require('celebrate');
-const urlValidation = require('../utils/url-validation');
+const { urlValidation } = require('../utils/data-validation');
 
 const {
   createCard, deleteCard, dislikeCard, getCards, likeCard,

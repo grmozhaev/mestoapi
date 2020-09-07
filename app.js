@@ -6,13 +6,13 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const { errors, celebrate, Joi } = require('celebrate');
+const { passwordValidation, urlValidation } = require('./utils/data-validation');
 const { login, createUser } = require('./controllers/users');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 const auth = require('./middlewares/auth');
 const cardsRouter = require('./routes/cards');
 const usersRouter = require('./routes/users');
 const NotFoundError = require('./errors/not-found-error');
-const urlValidation = require('./utils/url-validation');
 
 const { PORT = 3000 } = process.env;
 const app = express();
@@ -55,9 +55,9 @@ app.post('/signup', celebrate({
   body: Joi.object().keys({
     name: Joi.string().required().min(2).max(30),
     about: Joi.string().required(),
-    avatar: Joi.string().required().custom(urlValidation, 'url validation'),
+    avatar: Joi.string().required().custom(urlValidation),
     email: Joi.string().required().email(),
-    password: Joi.string().required(),
+    password: Joi.string().required().custom(passwordValidation),
   }),
 }), createUser);
 

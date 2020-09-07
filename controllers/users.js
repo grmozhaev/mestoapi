@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const NotFoundError = require('../errors/not-found-error');
-const InvalidDataError = require('../errors/invalid-data-error');
 const ConflictingRequestError = require('../errors/conflicting-request-error');
 const DefaultError = require('../errors/default-error');
 
@@ -39,10 +38,6 @@ module.exports.createUser = async (req, res, next) => {
   } = req.body;
 
   try {
-    if (password.match(/[\s]+/g)) {
-      throw new InvalidDataError('Пароль не может быть состоять из пробелов');
-    }
-
     const entry = await User.findOne({ email });
 
     if (entry) {
@@ -77,7 +72,7 @@ module.exports.updateBio = async (req, res, next) => {
       name = entry.name;
       about = entry.about;
     } else {
-      throw new NotFoundError('error');
+      throw new NotFoundError('Пользователь с таким ID отсутствует');
     }
 
     const { name: newName = name, about: newAbout = about } = req.body;
