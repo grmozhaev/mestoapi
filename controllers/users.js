@@ -1,15 +1,24 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const NotFoundError = require('../errors/not-found-error');
+const ConflictingRequestError = require('../errors/conflicting-request-error');
+const DefaultError = require('../errors/default-error');
 
 const User = require('../models/user');
 
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
-    .then((users) => res.send({ data: users }))
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .then((users) => {
+      if (!users) {
+        throw new DefaultError();
+      }
+
+      res.send({ data: users });
+    })
+    .catch(next);
 };
 
-module.exports.getUserById = (req, res) => {
+module.exports.getUserById = (req, res, next) => {
   const { userId } = req.params;
 
   User.findById(userId)
@@ -17,27 +26,22 @@ module.exports.getUserById = (req, res) => {
       if (user) {
         res.send({ data: user });
       } else {
-        res.status(404).send({ message: 'Пользователь не найден' });
+        throw new NotFoundError('Пользователь не найден');
       }
     })
-    .catch((err) => res.status(500).send({ message: err.message }));
+    .catch(next);
 };
 
-module.exports.createUser = async (req, res) => {
+module.exports.createUser = async (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
-
-  if (!password || password.match(/[\s]+/g)) {
-    res.status(400).send({ message: 'Пароль не может быть пустым или состоять из пробелов' });
-    return;
-  }
 
   try {
     const entry = await User.findOne({ email });
 
     if (entry) {
-      res.status(409).send({ message: 'Пользователь с таким email уже существует' });
+      throw new ConflictingRequestError('Пользователь с таким email уже существует');
     } else {
       const hash = await bcrypt.hash(password, 10);
 
@@ -54,39 +58,38 @@ module.exports.createUser = async (req, res) => {
       });
     }
   } catch (err) {
-    if (err.name === 'ValidationError') {
-      res.status(400).send({ message: err.message });
-    } else {
-      res.status(500).send({ message: err.message });
-    }
+    next(err);
   }
 };
 
-module.exports.updateBio = (req, res) => {
-  const { about } = req.body;
+module.exports.updateBio = async (req, res, next) => {
+  let name;
+  let about;
 
-  User.findByIdAndUpdate(
-    req.user._id,
-    { about },
-    { new: true, runValidators: true },
-  )
-    .then((user) => {
-      if (user) {
-        res.send({ data: user });
-      } else {
-        res.status(404).send({ message: 'Пользователь с таким ID отсутствует' });
-      }
-    })
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({ message: err.message });
-      } else {
-        res.status(500).send({ message: err.message });
-      }
-    });
+  try {
+    const entry = await User.findById(req.user._id);
+    if (entry) {
+      name = entry.name;
+      about = entry.about;
+    } else {
+      throw new NotFoundError('Пользователь с таким ID отсутствует');
+    }
+
+    const { name: newName = name, about: newAbout = about } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name: newName, about: newAbout },
+      { new: true, runValidators: true },
+    );
+
+    res.send({ data: user });
+  } catch (err) {
+    next(err);
+  }
 };
 
-module.exports.updateAvatar = (req, res) => {
+module.exports.updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
 
   User.findByIdAndUpdate(
@@ -98,19 +101,13 @@ module.exports.updateAvatar = (req, res) => {
       if (user) {
         res.send({ data: user });
       } else {
-        res.status(404).send({ message: 'Пользователь с таким ID отсутствует' });
+        throw new NotFoundError('Пользователь с таким ID отсутствует');
       }
     })
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({ message: err.message });
-      } else {
-        res.status(500).send({ message: err.message });
-      }
-    });
+    .catch(next);
 };
 
-module.exports.login = (req, res) => {
+module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
   const { NODE_ENV, JWT_KEY } = process.env;
 
@@ -126,7 +123,5 @@ module.exports.login = (req, res) => {
         })
         .end();
     })
-    .catch((err) => {
-      res.status(401).send({ message: err.message });
-    });
+    .catch(next);
 };
